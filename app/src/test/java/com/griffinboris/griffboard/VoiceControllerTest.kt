@@ -28,7 +28,11 @@ class VoiceControllerTest {
     private class Transcriber : VoiceTranscriber {
         val result = CompletableDeferred<String>()
         var cancelled = false
-        override suspend fun transcribe(path: String, audio: FloatArray, language: String) = result.await()
+        var calls = 0
+        override suspend fun transcribe(path: String, audio: FloatArray, language: String): String {
+            calls++
+            return result.await()
+        }
         override fun cancel() { cancelled = true }
     }
     private val speech = FloatArray(16_000) { 0.2f }
@@ -107,14 +111,34 @@ class VoiceControllerTest {
         assertEquals(VoiceController.State.IDLE, controller.state)
         assertTrue(controller.start("model", "en"))
     }
-    @Test fun silenceNeverReachesTranscription() = runTest {
+    @Test fun emptyOrSilentAudioNeverReachesTranscription() = runTest {
+        for (audio in listOf(floatArrayOf(), FloatArray(16_000), FloatArray(16_000) { 0.001f })) {
+            val recorder = Recorder()
+            val transcriber = Transcriber()
+            recorder.audio.complete(audio)
+            val errors = mutableListOf<String>()
+            val controller = VoiceController(this, { recorder }, transcriber, {}, { fail("Unexpected text") }, errors::add)
+            controller.start("model", "en")
+            advanceUntilIdle()
+            assertEquals(0, transcriber.calls)
+            assertEquals(1, errors.size)
+            assertTrue(recorder.released)
+            assertEquals(VoiceController.State.IDLE, controller.state)
+        }
+    }
+
+    @Test fun blankTranscriptNeverInsertsText() = runTest {
         val recorder = Recorder()
-        recorder.audio.complete(FloatArray(16_000))
+        val transcriber = Transcriber()
+        recorder.audio.complete(speech)
+        transcriber.result.complete(" \n\t ")
         val errors = mutableListOf<String>()
-        val controller = VoiceController(this, { recorder }, Transcriber(), {}, { fail("Unexpected text") }, errors::add)
+        val controller = VoiceController(this, { recorder }, transcriber, {}, { fail("Unexpected text") }, errors::add)
         controller.start("model", "en")
         advanceUntilIdle()
+        assertEquals(1, transcriber.calls)
         assertEquals(1, errors.size)
+        assertTrue(recorder.released)
         assertEquals(VoiceController.State.IDLE, controller.state)
     }
 

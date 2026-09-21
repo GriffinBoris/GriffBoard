@@ -11,6 +11,9 @@ class KeyboardPreferences(context: Context) {
     var numberRow: Boolean
         get() = preferences.getBoolean("numberRow", true)
         set(value) { preferences.edit { putBoolean("numberRow", value) } }
+    var autoCorrect: Boolean
+        get() = preferences.getBoolean("autoCorrect", true)
+        set(value) { preferences.edit { putBoolean("autoCorrect", value) } }
     var language: String
         get() = preferences.getString("language", "auto")!!
         set(value) { preferences.edit { putString("language", value) } }

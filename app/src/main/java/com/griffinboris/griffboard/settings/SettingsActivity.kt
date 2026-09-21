@@ -91,6 +91,7 @@ class SettingsActivity : AppCompatActivity() {
         val options = ui.column()
         options.addView(toggle("Number row", preferences.numberRow) { preferences.numberRow = it })
         options.addView(toggle("Key vibration", preferences.haptics) { preferences.haptics = it })
+        options.addView(toggle("Auto-correct common English typos", preferences.autoCorrect) { preferences.autoCorrect = it })
         val languageNames = arrayOf("Detect language", "English", "Spanish", "French", "German", "Italian", "Portuguese", "Japanese", "Korean", "Chinese")
         val languageCodes = arrayOf("auto", "en", "es", "fr", "de", "it", "pt", "ja", "ko", "zh")
         val language = ui.button("", secondary = true) {}

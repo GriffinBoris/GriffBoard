@@ -11,12 +11,13 @@ Built with Kotlin, native Android views, Material components, and whisper.cpp.
 - System light/dark appearance and optional key vibration.
 - Tap the microphone to replace the keys with a timer and live microphone waveform. Tap the waveform to stop and transcribe. The captured waveform pulses during transcription; tap again to cancel. There is no fixed recording limit. Longer recordings use more memory.
 - English suggestions appear in the toolbar: word completion, simple spelling corrections, and common next-word choices. Tap a suggestion to insert it. Suggestions run offline, do not learn or store typed text, and are disabled in passwords, email addresses, URLs, numeric fields, and editors that request no suggestions.
+- Auto-correct previews common English typo fixes before applying them. Tap X to keep your spelling; otherwise Space, punctuation, or Enter accepts the correction. You can also tap the preview to accept it. After acceptance, tap Undo or immediately press Backspace to restore the original word. You can turn auto-correct off in Keyboard preferences.
 - Sentence-ending punctuation capitalizes the next letter. Shift updates key labels without rebuilding touch targets, so overlapping taps remain active.
 - Six downloadable, selectable models: Tiny English, Base English, Base multilingual, Small, Medium, and Large v3 Turbo.
 - Download progress, cancellation, removal, size checks, and SHA-256 verification before models become usable.
 - On-device inference, no account, no telemetry, no cloud transcription, and no saved audio or typing history.
 
-This version does not include swipe typing, automatic word replacement, personalized predictions, continuous streaming dictation, or arbitrary model imports. English suggestions use a bundled frequency dictionary and a small set of common next-word choices. The keyboard layout is English; multilingual models can transcribe other languages.
+This version does not include swipe typing, personalized predictions, continuous streaming dictation, or arbitrary model imports. English suggestions use a bundled frequency dictionary and a small set of common next-word choices. Automatic correction uses explicit common-typo rules and does not guess replacements for arbitrary unknown words. The keyboard layout is English; multilingual models can transcribe other languages.
 
 ## Install
 

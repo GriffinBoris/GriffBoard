@@ -2,12 +2,23 @@ package com.griffinboris.griffboard
 
 import android.text.InputType
 import com.griffinboris.griffboard.keyboard.EditorActions
+import com.griffinboris.griffboard.keyboard.AutoCorrect
 import com.griffinboris.griffboard.keyboard.WordSuggestions
 import com.griffinboris.griffboard.voice.AudioSignal
 import org.junit.Assert.*
 import org.junit.Test
 
 class TypingTest {
+    @Test fun autoCorrectOnlyAcceptsKnownTyposAndPreservesSentenceCase() {
+        assertEquals("the", AutoCorrect.replacement("say teh"))
+        assertEquals("The", AutoCorrect.replacement("Teh"))
+        assertEquals("Because", AutoCorrect.replacement("Hi. Becuase"))
+        assertEquals("don't", AutoCorrect.replacement("I dont"))
+        assertEquals("a lot", AutoCorrect.replacement("thanks alot"))
+        listOf("form", "from", "hel", "Griffin", "TEH", "tEh", "Say Teh", "foo.teh", "foo_teh", "a@teh", "1teh").forEach {
+            assertNull(it, AutoCorrect.replacement(it))
+        }
+    }
     @Test fun waveformPreservesSignedPeaksAndPartialBuckets() {
         val samples = ShortArray(105)
         samples[12] = Short.MIN_VALUE

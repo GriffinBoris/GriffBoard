@@ -23,6 +23,9 @@ import java.io.File
 class VoiceFeedbackInstrumentedTest {
     @Test fun elapsedTimeAndWaveformsKeepStopAndCancelAccessible() {
         var microphoneTaps = 0
+        var undoTaps = 0
+        var acceptTaps = 0
+        var dismissTaps = 0
         val listener = object : KeyboardView.Listener {
             override fun text(value: String) = Unit
             override fun backspace() = Unit
@@ -30,6 +33,9 @@ class VoiceFeedbackInstrumentedTest {
             override fun microphone() { microphoneTaps++ }
             override fun settings() = Unit
             override fun switchKeyboard() = Unit
+            override fun undoCorrection() { undoTaps++ }
+            override fun acceptCorrection() { acceptTaps++ }
+            override fun dismissCorrection() { dismissTaps++ }
         }
         ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
             lateinit var keyboard: KeyboardView
@@ -65,6 +71,17 @@ class VoiceFeedbackInstrumentedTest {
             onView(withText("hello")).check(matches(withEffectiveVisibility(Visibility.GONE)))
             scenario.onActivity { keyboard.voiceStatus("Ready", false, false, true) }
             onView(withText("hello")).check(matches(isDisplayed()))
+            scenario.onActivity { keyboard.correction("teh") }
+            onView(withContentDescription("Undo correction. Restore teh")).perform(click())
+            assertEquals(1, undoTaps)
+            scenario.onActivity { keyboard.correction(null) }
+            onView(withText("hello")).check(matches(isDisplayed()))
+            scenario.onActivity { keyboard.previewCorrection("teh", "the") }
+            onView(withText("the")).check(matches(isDisplayed())).perform(click())
+            assertEquals(1, acceptTaps)
+            onView(withContentDescription("Keep teh. Dismiss correction")).perform(click())
+            assertEquals(1, dismissTaps)
+            assertEquals(1, undoTaps)
         }
     }
 

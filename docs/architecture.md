@@ -15,6 +15,7 @@ GriffBoard is one Android app module. It has no backend and no account system.
 | `keyboard/VoiceWaveform` | Signed microphone waveform; recorded shape pulses during transcription |
 | `keyboard/RecordingOverlay` | Timer and tappable waveform covering the key area during dictation |
 | `keyboard/WordSuggestions` | Offline English completions, one-edit corrections, and basic next-word choices |
+| `keyboard/AutoCorrect` | Conservative common-typo replacements and cursor-checked undo |
 | `voice/WhisperTranscriber` | Coroutine/JNI boundary and native-job ownership |
 | `cpp/` | Pinned whisper.cpp build and a small JNI adapter |
 

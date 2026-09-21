@@ -36,6 +36,9 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
         fun settings()
         fun switchKeyboard()
         fun suggestion(value: String) {}
+        fun undoCorrection() {}
+        fun acceptCorrection() {}
+        fun dismissCorrection() {}
     }
 
     private val preferences = KeyboardPreferences(context)
@@ -48,6 +51,35 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
     private val rows = LinearLayout(context).apply { orientation = VERTICAL }
     private val status = TextView(context)
     private val suggestions = LinearLayout(context).apply { isBaselineAligned = false }
+    private var correctedWord: String? = null
+    private var correctionPreview: Pair<String, String>? = null
+    private val correctionLabel = key("", "Correction", false) {
+        if (correctedWord != null) listener.undoCorrection() else listener.acceptCorrection()
+    }.apply {
+        textSize = 14f
+        maxLines = 1
+        ellipsize = android.text.TextUtils.TruncateAt.END
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(14), 0, dp(4), 0)
+        setBackgroundColor(Color.TRANSPARENT)
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
+    private val correctionDismiss = ImageButton(context).apply {
+        setImageResource(R.drawable.ic_cancel)
+        imageTintList = ColorStateList.valueOf(textColor)
+        scaleType = ImageView.ScaleType.FIT_CENTER
+        setPadding(dp(4), dp(6), dp(4), dp(6))
+        background = background(Color.TRANSPARENT)
+        setOnClickListener {
+            if (correctedWord != null) listener.undoCorrection() else listener.dismissCorrection()
+        }
+    }
+    private val correctionChip = LinearLayout(context).apply {
+        isBaselineAligned = false
+        background = InsetDrawable(background(utilityColor), dp(2), dp(6), dp(2), dp(6))
+        addView(correctionLabel, LayoutParams(0, -1, 1f))
+        addView(correctionDismiss, LayoutParams(dp(44), -1))
+    }
     private val recordingOverlay = RecordingOverlay(context, textColor, accent) { listener.microphone() }
     private val letterKeys = mutableListOf<Pair<TextView, Char>>()
     private var shiftKey: ImageButton? = null
@@ -70,21 +102,23 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
     init {
         orientation = VERTICAL
         setBackgroundColor(panelColor)
-        setPadding(dp(4), dp(3), dp(4), dp(36))
+        setPadding(dp(4), dp(3), dp(4), dp(48))
         val toolbar = LinearLayout(context).apply {
             gravity = Gravity.CENTER_VERTICAL
             isBaselineAligned = false
         }
         toolbar.addView(key("⚙", "Keyboard settings", utility = true) { listener.settings() }.apply {
-            background = InsetDrawable(background, dp(2))
-        }, LayoutParams(dp(48), dp(48)))
+            textSize = 19f
+            background = InsetDrawable(background, dp(2), dp(6), dp(2), dp(6))
+        }, LayoutParams(dp(40), dp(48)))
         emojiButton = key("☺︎", "Emoji", utility = true) {
             emoji = !emoji
             symbols = false
             renderKeys()
         }
-        emojiButton.background = InsetDrawable(emojiButton.background, dp(2))
-        toolbar.addView(emojiButton, LayoutParams(dp(48), dp(48)))
+        emojiButton.textSize = 19f
+        emojiButton.background = InsetDrawable(emojiButton.background, dp(2), dp(6), dp(2), dp(6))
+        toolbar.addView(emojiButton, LayoutParams(dp(40), dp(48)))
         status.apply {
             text = "GriffBoard · on device"
             textSize = 12f
@@ -94,19 +128,20 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
         val voiceDisplay = FrameLayout(context).apply {
-            setPadding(dp(8), 0, dp(8), 0)
             addView(status, FrameLayout.LayoutParams(-1, -1))
             addView(suggestions, FrameLayout.LayoutParams(-1, -1))
+            addView(correctionChip, FrameLayout.LayoutParams(-1, -1))
         }
+        correctionChip.visibility = View.GONE
         suggestions.visibility = View.GONE
         toolbar.addView(voiceDisplay, LayoutParams(0, dp(48), 1f))
         mic.apply {
             contentDescription = "Start voice typing"
             setImageResource(R.drawable.ic_microphone)
-            background = InsetDrawable(background(Color.rgb(53, 106, 230)), dp(2))
+            background = InsetDrawable(background(Color.rgb(53, 106, 230)), dp(2), dp(6), dp(2), dp(6))
             setOnClickListener { listener.microphone() }
         }
-        toolbar.addView(mic, LayoutParams(dp(52), dp(48)))
+        toolbar.addView(mic, LayoutParams(dp(44), dp(48)))
         addView(toolbar)
         addView(FrameLayout(context).apply {
             addView(rows, FrameLayout.LayoutParams(-1, -2))
@@ -121,7 +156,7 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
         recordingOverlay.visibility = View.GONE
         ViewCompat.setOnApplyWindowInsetsListener(this) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
-            setPadding(dp(4) + bars.left, dp(3), dp(4) + bars.right, maxOf(dp(36), bars.bottom))
+            setPadding(dp(4) + bars.left, dp(3), dp(4) + bars.right, maxOf(dp(36), bars.bottom) + dp(12))
             insets
         }
         renderKeys()
@@ -175,13 +210,35 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
     }
 
     fun invalidateSuggestions() {
+        previewCorrection(null, null)
         for (index in 0 until suggestions.childCount) suggestions.getChildAt(index).isEnabled = false
     }
 
+    fun correction(original: String?) {
+        correctedWord = original
+        showSuggestionStrip()
+    }
+
+    fun previewCorrection(original: String?, replacement: String?) {
+        correctionPreview = if (original != null && replacement != null) original to replacement else null
+        showSuggestionStrip()
+    }
+
     private fun showSuggestionStrip() {
-        val show = !voiceActive && !statusPriority && suggestions.isNotEmpty()
+        val chip = !voiceActive && !statusPriority && (correctedWord != null || correctionPreview != null)
+        val show = !voiceActive && !statusPriority && !chip && suggestions.isNotEmpty()
+        if (correctedWord != null) {
+            correctionLabel.text = "Undo “$correctedWord”"
+            correctionLabel.contentDescription = "Undo correction. Restore $correctedWord"
+            correctionDismiss.contentDescription = "Undo correction"
+        } else correctionPreview?.let { (original, replacement) ->
+            correctionLabel.text = replacement
+            correctionLabel.contentDescription = "Accept $replacement. Also accepted on Space, punctuation, or Enter"
+            correctionDismiss.contentDescription = "Keep $original. Dismiss correction"
+        }
+        correctionChip.visibility = if (chip) View.VISIBLE else View.GONE
         suggestions.visibility = if (show) View.VISIBLE else View.GONE
-        status.visibility = if (show) View.GONE else View.VISIBLE
+        status.visibility = if (show || chip) View.GONE else View.VISIBLE
     }
 
     fun capitalize(value: Boolean) {
@@ -227,7 +284,7 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
         } else if (symbols) {
             renderSymbols()
         } else {
-            if (preferences.numberRow) row("1234567890".map { it.toString() }, small = true)
+            if (preferences.numberRow) row("1234567890".map { it.toString() })
             letterRow("qwertyuiop")
             letterRow("asdfghjkl", 14)
             val third = newRow()
@@ -269,7 +326,7 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
     }
 
     private fun renderSymbols() {
-        row("1234567890".map { it.toString() }, small = true)
+        row("1234567890".map { it.toString() })
         if (symbolPage == 0) {
             row(listOf("+", "×", "÷", "=", "/", "_", "<", ">", "[", "]"))
             row(listOf("!", "@", "#", "$", "%", "^", "&", "*", "(", ")"))
@@ -308,9 +365,9 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
         val row = newRow().apply { setPadding(dp(inset), 0, dp(inset), 0) }
         letters.forEach { addLetter(row, it) }
     }
-    private fun row(values: List<String>, small: Boolean = false, inset: Int = 0) {
+    private fun row(values: List<String>, inset: Int = 0) {
         val row = newRow().apply { setPadding(dp(inset), 0, dp(inset), 0) }
-        values.forEach { value -> addKey(row, value, small = small) { type(value) } }
+        values.forEach { value -> addKey(row, value) { type(value) } }
     }
     private fun newRow() = LinearLayout(context).apply {
         isBaselineAligned = false
@@ -318,17 +375,16 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
         rows.addView(this, LayoutParams(-1, -2))
     }
     private fun addKey(row: LinearLayout, label: String, weight: Float = 1f, utility: Boolean = false,
-        small: Boolean = false, action: () -> Unit): TextView {
+        action: () -> Unit): TextView {
         val key = key(label, label, utility, action)
-        row.addView(key, LayoutParams(0, keyHeight(small), weight))
-        if (small) { key.textSize = 17f; key.background = background(utilityColor) }
+        row.addView(key, LayoutParams(0, keyHeight(), weight))
         // Keep the visual gutters inside each key's touch target.
         key.background = InsetDrawable(key.background, dp(2))
         return key
     }
-    private fun keyHeight(small: Boolean = false): Int {
+    private fun keyHeight(): Int {
         val landscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        return dp(if (landscape) 40 else if (small) 38 else 50)
+        return dp(if (landscape) 40 else 50)
     }
     private fun addIconKey(row: LinearLayout, icon: Int, description: String, action: () -> Unit) = ImageButton(context).apply {
         setImageResource(icon)
@@ -374,7 +430,7 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
     private fun key(label: String, description: String, utility: Boolean, action: () -> Unit) = TextView(context).apply {
         text = label
         contentDescription = description
-        textSize = 21f
+        textSize = if (label.singleOrNull()?.isDigit() == true) 20f else 21f
         gravity = Gravity.CENTER
         setTextColor(textColor)
         typeface = Typeface.create("sans-serif", Typeface.NORMAL)

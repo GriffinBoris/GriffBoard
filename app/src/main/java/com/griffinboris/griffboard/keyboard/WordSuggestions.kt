@@ -27,7 +27,7 @@ class WordSuggestions(private val words: List<String>) {
             else (completions + words.asSequence().filter { it !in completions && oneEditAway(lower, it) }.take(3 - completions.size)).toList()
         }
         val capitalize = prefix.firstOrNull()?.isUpperCase() == true || (prefix.isEmpty() && sentenceStart(beforeCursor))
-        return candidates.map {
+        val suggestions = candidates.map {
             when {
                 prefix.length > 1 && prefix.all(Char::isUpperCase) -> it.uppercase(Locale.ROOT)
                 it == "i" || it.startsWith("i'") -> it.replaceFirstChar(Char::uppercaseChar)
@@ -35,6 +35,7 @@ class WordSuggestions(private val words: List<String>) {
                 else -> it
             }
         }
+        return (listOfNotNull(AutoCorrect.replacement(beforeCursor)) + suggestions).distinct().take(3)
     }
 
     private fun oneEditAway(left: String, right: String): Boolean {

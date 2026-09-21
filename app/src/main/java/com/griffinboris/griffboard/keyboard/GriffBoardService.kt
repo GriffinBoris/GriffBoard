@@ -37,6 +37,9 @@ class GriffBoardService : InputMethodService(), KeyboardView.Listener {
     private var message: String? = null
     private var suggestionJob: Job? = null
     private var suggestedBefore: String? = null
+    private var appliedCorrection: AutoCorrect.Applied? = null
+    private var pendingCorrection: AutoCorrect.Candidate? = null
+    private var dismissedCorrection: AutoCorrect.Candidate? = null
     private val dictionary by lazy {
         scope.async(Dispatchers.IO) {
             WordSuggestions(assets.open("english-frequency.txt").bufferedReader().useLines { lines ->
@@ -98,9 +101,66 @@ class GriffBoardService : InputMethodService(), KeyboardView.Listener {
         keyboard?.editor(numeric, EditorActions.enterLabel(info), capitalize, prose)
     }
 
-    override fun text(value: String) { clearMessage(); currentInputConnection?.commitText(value, 1); updateTyping() }
-    override fun backspace() { clearMessage(); currentInputConnection?.let(EditorActions::backspace); updateTyping() }
-    override fun enter() { clearMessage(); currentInputConnection?.let { EditorActions.enter(it, info) }; updateTyping() }
+    override fun text(value: String) {
+        clearMessage()
+        val dismissed = dismissedCorrection
+        clearCorrection()
+        val connection = currentInputConnection ?: return
+        if (preferences.autoCorrect && EditorActions.suggestionsAllowed(info.inputType)) {
+            appliedCorrection = AutoCorrect.apply(connection, value, dismissed)
+        }
+        if (appliedCorrection == null) connection.commitText(value, 1)
+        keyboard?.correction(appliedCorrection?.original)
+        updateTyping()
+    }
+    override fun backspace() {
+        clearMessage()
+        if (!restoreCorrection()) currentInputConnection?.let(EditorActions::backspace)
+        clearCorrection()
+        updateTyping()
+    }
+    override fun enter() {
+        clearMessage()
+        val connection = currentInputConnection ?: return
+        if (preferences.autoCorrect && EditorActions.suggestionsAllowed(info.inputType)) {
+            AutoCorrect.apply(connection, "", dismissedCorrection)
+        }
+        clearCorrection()
+        EditorActions.enter(connection, info)
+        updateTyping()
+    }
+
+    override fun undoCorrection() { restoreCorrection(); updateTyping() }
+
+    override fun acceptCorrection() {
+        val pending = pendingCorrection ?: return
+        val connection = currentInputConnection ?: return
+        if (!preferences.autoCorrect || !EditorActions.suggestionsAllowed(info.inputType) ||
+            AutoCorrect.candidate(connection) != pending) { updateTyping(); return }
+        text(" ")
+    }
+
+    override fun dismissCorrection() {
+        val pending = pendingCorrection ?: return
+        val connection = currentInputConnection ?: return
+        if (AutoCorrect.candidate(connection) == pending) dismissedCorrection = pending
+        updateTyping()
+    }
+
+    private fun restoreCorrection(): Boolean {
+        val applied = appliedCorrection ?: return false
+        clearCorrection()
+        if (!EditorActions.suggestionsAllowed(info.inputType)) return false
+        return currentInputConnection?.let { AutoCorrect.undo(it, applied) } == true
+    }
+
+    private fun clearCorrection() {
+        appliedCorrection = null
+        pendingCorrection = null
+        dismissedCorrection = null
+        keyboard?.correction(null)
+        keyboard?.previewCorrection(null, null)
+    }
 
     private fun clearMessage() {
         if (message == null) return
@@ -110,12 +170,21 @@ class GriffBoardService : InputMethodService(), KeyboardView.Listener {
 
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
+        appliedCorrection?.let { applied ->
+            if (newSelStart != applied.cursor || newSelEnd != applied.cursor ||
+                currentInputConnection?.let { AutoCorrect.matches(it, applied) } != true) clearCorrection()
+        }
+        dismissedCorrection?.let {
+            if (newSelStart != it.cursor || newSelEnd != it.cursor) dismissedCorrection = null
+        }
         updateTyping()
     }
 
     private fun updateTyping() {
         suggestionJob?.cancel()
         suggestedBefore = null
+        pendingCorrection = null
+        keyboard?.previewCorrection(null, null)
         if (!EditorActions.prose(info.inputType)) { keyboard?.suggestions(emptyList()); return }
         keyboard?.invalidateSuggestions()
         suggestionJob = scope.launch {
@@ -123,7 +192,12 @@ class GriffBoardService : InputMethodService(), KeyboardView.Listener {
             val connection = currentInputConnection ?: return@launch
             val before = connection.getTextBeforeCursor(256, 0)?.toString() ?: return@launch
             keyboard?.capitalize(WordSuggestions.sentenceStart(before) || connection.getCursorCapsMode(info.inputType) != 0)
-            if (!EditorActions.suggestionsAllowed(info.inputType) || !connection.getSelectedText(0).isNullOrEmpty()) return@launch
+            if (!EditorActions.suggestionsAllowed(info.inputType) || !connection.getSelectedText(0).isNullOrEmpty()) {
+                keyboard?.suggestions(emptyList())
+                return@launch
+            }
+            pendingCorrection = if (preferences.autoCorrect) AutoCorrect.candidate(connection)?.takeUnless { it == dismissedCorrection } else null
+            keyboard?.previewCorrection(pendingCorrection?.original, pendingCorrection?.replacement)
             val engine = dictionary.await()
             val words = withContext(Dispatchers.Default) { engine.suggest(before) }
             suggestedBefore = before
@@ -136,6 +210,7 @@ class GriffBoardService : InputMethodService(), KeyboardView.Listener {
         val connection = currentInputConnection ?: return
         val before = connection.getTextBeforeCursor(256, 0)?.toString() ?: return
         if (before != suggestedBefore || !connection.getSelectedText(0).isNullOrEmpty()) { updateTyping(); return }
+        clearCorrection()
         EditorActions.insertSuggestion(connection, before, value)
         clearMessage()
         updateTyping()
@@ -154,16 +229,18 @@ class GriffBoardService : InputMethodService(), KeyboardView.Listener {
         }
         val model = models.selected()
         if (model == null) { settings(); return }
+        clearCorrection()
         message = null
         voiceToken = session.begin()
         voice.start(models.file(model).absolutePath, if (model.englishOnly) "en" else preferences.language)
     }
 
     override fun settings() {
+        clearCorrection()
         cancelVoice()
         startActivity(Intent(this, SettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
-    override fun switchKeyboard() { getSystemService(InputMethodManager::class.java).showInputMethodPicker() }
+    override fun switchKeyboard() { clearCorrection(); getSystemService(InputMethodManager::class.java).showInputMethodPicker() }
 
     private fun updateStatus() {
         val state = voice.state
@@ -189,7 +266,12 @@ class GriffBoardService : InputMethodService(), KeyboardView.Listener {
     }
     override fun onFinishInput() { clearSuggestions(); cancelVoice(); super.onFinishInput() }
     override fun onWindowHidden() { clearSuggestions(); cancelVoice(); super.onWindowHidden() }
-    private fun clearSuggestions() { suggestionJob?.cancel(); suggestedBefore = null; keyboard?.suggestions(emptyList()) }
+    private fun clearSuggestions() {
+        suggestionJob?.cancel()
+        suggestedBefore = null
+        keyboard?.suggestions(emptyList())
+        clearCorrection()
+    }
     override fun onEvaluateFullscreenMode() = false
     override fun onDestroy() {
         cancelVoice()
