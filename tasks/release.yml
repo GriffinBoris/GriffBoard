@@ -1,0 +1,25 @@
+version: '3'
+
+tasks:
+  check:
+    desc: Validate the Android release version
+    cmds:
+      - bash scripts/release.sh check
+  prepare:
+    desc: Set VERSION and an increasing VERSION_CODE before committing
+    requires:
+      vars: [VERSION, VERSION_CODE]
+    env:
+      VERSION: '{{.VERSION}}'
+      VERSION_CODE: '{{.VERSION_CODE}}'
+    cmds:
+      - bash scripts/release.sh prepare
+  tag:
+    desc: Validate and create an annotated local release tag from a clean commit
+    cmds:
+      - task: :local:check
+      - bash scripts/release.sh tag
+  publish:
+    desc: Push the current release tag to trigger GitHub APK publication
+    cmds:
+      - bash scripts/release.sh publish

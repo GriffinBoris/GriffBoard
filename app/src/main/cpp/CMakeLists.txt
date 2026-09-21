@@ -1,0 +1,32 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(griffboard LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+# Sideloadable debug APKs need usable CPU inference speed, too.
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O3")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O3")
+
+include(FetchContent)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(WHISPER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(WHISPER_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(WHISPER_BUILD_SERVER OFF CACHE BOOL "" FORCE)
+set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
+set(GGML_OPENMP OFF CACHE BOOL "" FORCE)
+set(GGML_CPU_ALL_VARIANTS OFF CACHE BOOL "" FORCE)
+set(GGML_BACKEND_DL OFF CACHE BOOL "" FORCE)
+if(ANDROID_ABI STREQUAL "x86_64")
+    set(GGML_AVX OFF CACHE BOOL "" FORCE)
+    set(GGML_AVX2 OFF CACHE BOOL "" FORCE)
+    set(GGML_FMA OFF CACHE BOOL "" FORCE)
+    set(GGML_F16C OFF CACHE BOOL "" FORCE)
+endif()
+FetchContent_Declare(whisper
+    URL https://github.com/ggml-org/whisper.cpp/archive/refs/tags/v1.9.4.tar.gz
+    URL_HASH SHA256=57e280cee375ab02425b806ad5146b99f6eb9357e3c2b31357c8a6af2e2e44ae)
+FetchContent_MakeAvailable(whisper)
+
+add_library(griffboard SHARED whisper_jni.cpp)
+target_compile_options(griffboard PRIVATE -Wall -Wextra -Werror)
+target_link_libraries(griffboard whisper android log)
+target_link_options(griffboard PRIVATE "-Wl,-z,max-page-size=16384")

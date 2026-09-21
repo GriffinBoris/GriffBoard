@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">GriffBoard</string>
+    <string name="keyboard_language">English (US)</string>
 </resources>

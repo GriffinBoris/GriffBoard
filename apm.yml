@@ -1,0 +1,17 @@
+name: GriffBoard
+version: 1.0.0
+description: APM project for GriffBoard
+author: griffinboris
+# Which agent platforms to deploy to.
+# Resolution order: --target flag > this field > auto-detect from filesystem.
+# Accepted values: agent-skills, antigravity, claude, codex, copilot, cursor, gemini, grok-build, kiro, opencode, windsurf
+targets:
+  - claude
+  - codex
+  - opencode
+dependencies:
+  apm:
+    - GriffinBoris/Agents#v0.1.0
+  mcp: []
+includes: auto
+scripts: {}

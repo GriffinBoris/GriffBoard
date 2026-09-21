@@ -1,0 +1,19 @@
+version: '3'
+
+includes:
+  ai:
+    taskfile: ./tasks/ai.yml
+    dir: .
+  local:
+    taskfile: ./tasks/local.yml
+    dir: .
+  release:
+    taskfile: ./tasks/release.yml
+    dir: .
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list --sort alphanumeric
+    silent: true

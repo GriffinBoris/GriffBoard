@@ -1,0 +1,33 @@
+version: '3'
+
+tasks:
+  build:
+    desc: Build a sideloadable debug APK
+    cmds:
+      - ./gradlew assembleDebug
+  test:
+    desc: Run JVM unit tests
+    cmds:
+      - bash scripts/test-release.sh
+      - ./gradlew testDebugUnitTest
+  lint:
+    desc: Run Android lint
+    cmds:
+      - ./gradlew lintDebug
+  check:
+    desc: Test, lint, and build GriffBoard
+    cmds:
+      - bash scripts/test-release.sh
+      - ./gradlew testDebugUnitTest lintDebug assembleDebug
+  install:
+    desc: Install on a connected Android device
+    cmds:
+      - ./gradlew installDebug
+  test:device:
+    desc: Run instrumentation tests on a connected device or emulator
+    cmds:
+      - ./gradlew connectedDebugAndroidTest
+  clean:
+    desc: Remove Android build outputs
+    cmds:
+      - ./gradlew clean
