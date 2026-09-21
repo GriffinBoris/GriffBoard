@@ -65,6 +65,9 @@ class SettingsActivity : AppCompatActivity() {
         }
         content.addView(ui.label("GriffBoard", 32f, true))
         content.addView(ui.label("Typing and voice, on your device.", 16f))
+        content.addView(ui.button("Voice shortcuts · keep your current keyboard", secondary = true) {
+            startActivity(Intent(this, DictationSettingsActivity::class.java))
+        })
         content.addView(ui.section("Keyboard setup"))
         val setup = ui.column()
         keyboardStatus = ui.label("", 16f, true)

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/dictation_accessibility_description"
+    android:settingsActivity="com.griffinboris.griffboard.settings.DictationSettingsActivity"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagInputMethodEditor"
+    android:canRetrieveWindowContent="false"
+    android:notificationTimeout="100" />

@@ -16,6 +16,7 @@ Built with Kotlin, native Android views, Material components, and whisper.cpp.
 - Six downloadable, selectable models: Tiny English, Base English, Base multilingual, Small, Medium, and Large v3 Turbo.
 - Download progress, cancellation, removal, size checks, and SHA-256 verification before models become usable.
 - On-device inference, no account, no telemetry, no cloud transcription, and no saved audio or typing history.
+- Optional voice shortcuts on Android 13+: a floating microphone, Quick Settings tile, notification shortcut, and app shortcut for a configurable side button. Keep your current keyboard selected.
 
 This version does not include swipe typing, personalized predictions, continuous streaming dictation, or arbitrary model imports. English suggestions use a bundled frequency dictionary and a small set of common next-word choices. Automatic correction combines common-typo rules with single-edit matches for unknown words when one spelling clearly outranks the alternatives. Ambiguous suggestions remain manual choices. The keyboard layout is English; multilingual models can transcribe other languages.
 
@@ -31,7 +32,22 @@ Requires Android 10 or newer on ARM64 or x86_64. Current Galaxy phones use ARM64
 
 Android displays its standard third-party keyboard warning during setup. The app's internet permission is used for requested model downloads. Dictation works offline after downloading a model.
 
-Closing the keyboard, switching editors, or opening settings cancels voice typing. Voice typing is disabled in password fields. A late transcript cannot be inserted into a different editor session.
+Closing GriffBoard's keyboard, switching editors, or opening settings cancels keyboard voice typing. Voice typing is disabled in password fields. A late transcript cannot be inserted into a different editor session.
+
+## Voice with Samsung Keyboard or another keyboard
+
+On Android 13 or newer, open **GriffBoard → Voice shortcuts**. Download and select a model in the main settings first. Enable **GriffBoard Voice** through the Accessibility setup button. The optional service provides the floating panel and access to the active editor; it does not retrieve screen contents.
+
+Each shortcut starts off and has its own switch:
+
+- **Floating microphone:** drag to position it, then tap to open the panel.
+- **Quick Settings tile:** enable it, then tap **Add Quick Settings tile**.
+- **Notification shortcut:** allow notifications to keep a launch shortcut in the notification shade.
+- **Side-button / app shortcut:** exposes **GriffBoard Voice** as a launchable app. On supported Samsung phones, choose it under **Settings → Advanced features → Side button → Double press → Open app**. Button options vary by phone; GriffBoard does not intercept hardware keys.
+
+Focus a text field, open any enabled shortcut, and tap **Record**. Tap **Stop** to transcribe with your selected local model. The panel shows a live waveform and elapsed time, then pulses during transcription. It sends text to the original editor. **Copy** is available if an app does not accept direct insertion; copying is never automatic. Changing fields, moving the cursor, changing apps, locking the screen, or closing the panel cancels active dictation. An idle panel closes after two minutes.
+
+The notification shortcut is optional. Android's foreground-service status is separate and remains required while the dictation panel is open. Enabling a shortcut alone does not record audio. Android 10–12 can continue using voice typing inside GriffBoard's keyboard.
 
 ## Develop
 

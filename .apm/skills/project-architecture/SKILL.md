@@ -13,6 +13,7 @@ GriffBoard is a single-module Kotlin Android keyboard with local Whisper dictati
 
 - `app/src/main/java/com/griffinboris/griffboard/keyboard/`: input-method service, key layout, and editor behavior.
 - `app/src/main/java/com/griffinboris/griffboard/voice/`: microphone ownership and JNI inference.
+- `app/src/main/java/com/griffinboris/griffboard/dictation/`: Android 13+ optional voice shortcuts, accessibility editor connection, and floating dictation panel.
 - `app/src/main/java/com/griffinboris/griffboard/models/`: pinned model catalog and atomic verified downloads.
 - `app/src/main/java/com/griffinboris/griffboard/settings/`: launcher, onboarding, and model management.
 - `app/src/main/cpp/`: small JNI adapter and pinned upstream whisper.cpp build.
@@ -24,6 +25,7 @@ GriffBoard is a single-module Kotlin Android keyboard with local Whisper dictati
 - Use native Android views for the IME and Material components for settings. Share theme values; support light/dark system appearance.
 - Keep the input-method service responsible for Android lifecycle and text insertion, with recording and inference off the main thread.
 - Native inference is serialized. Cancellation must reach whisper.cpp, and native contexts must be freed after use.
+- Standalone dictation uses an explicitly enabled Accessibility input method without screen-content retrieval. All shortcut preferences default off. Keep overlays non-focusable and start microphone foreground status through a visible activity. Capture the editor connection when Record is tapped; field, cursor, app, and lock changes invalidate the session. Copy is explicit. Closing the panel clears transcripts and stops foreground status after microphone cleanup. Reuse the keyboard's model store, voice controller, and waveform.
 - Recording has no fixed duration cutoff. Keep PCM in memory and report captured duration and signed min/max sample buckets on the controller's coroutine context. Preserve the recorded waveform during transcription; pulse its height and opacity to indicate activity. Stop animations when the view detaches.
 - Change letter case in place instead of rebuilding key views: rebuilding can cancel overlapping finger touches. Keep visual key gutters inside the touch targets.
 - English suggestions use the bundled, attributed dictionary offline. Do not persist editor text. Debounce lookup off the main thread, invalidate stale results on edits/session changes, and exclude passwords, structured fields, and editors that disable suggestions.

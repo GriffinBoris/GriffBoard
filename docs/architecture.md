@@ -8,6 +8,7 @@ GriffBoard is one Android app module. It has no backend and no account system.
 | `keyboard/KeyboardView` | Key layout, light/dark colors, haptics, shift, symbols, emoji, repeat delete |
 | `keyboard/EditorActions` | Password classification, Unicode deletion, editor actions |
 | `settings/` | Setup, runtime permission, model cards, preferences, keyboard test field |
+| `dictation/` | Optional standalone voice shortcuts, accessibility editor connection, floating panel, and foreground microphone service |
 | `models/` | Immutable catalog, private storage, verified WorkManager downloads |
 | `voice/VoiceController` | Recording/transcription state and cancellation |
 | `voice/AudioCapture` | 16 kHz mono PCM capture, elapsed time and signed waveform peaks, microphone cleanup |
@@ -28,6 +29,14 @@ The microphone starts one recording. Stopping it releases the microphone before 
 Each recording carries an editor-session generation. Finishing input, hiding the keyboard, switching fields, or opening settings invalidates that generation. Cancellation stops recording, sets the native atomic cancellation flag, and cancels the coroutine. Native model loading completes before cancellation can release the model; inference checks cancellation through whisper.cpp's abort callback. A new recording cannot overlap cleanup from the previous one.
 
 The controller has small recorder/transcriber interfaces to test hardware failure and cancellation without a real microphone. Ordinary layout and storage code use direct Android APIs.
+
+## Standalone dictation
+
+Android 13+ provides an Accessibility input method alongside the selected keyboard. `DictationAccessibilityService` requests `flagInputMethodEditor` without screen-content retrieval. It owns a non-focusable accessibility overlay, a `VoiceController`, and an editor-session generation. Field or cursor changes invalidate the target connection and cancel active work. App changes and screen locking also cancel work. The service is disabled by a version-qualified resource on older Android versions.
+
+Four independent preferences control the floating microphone, Quick Settings tile, notification shortcut, and launcher alias used by configurable buttons. They default off. Each starts `VoiceLaunchActivity`, which checks that its source remains enabled, obtains microphone permission, and stays visible until the service acknowledges foreground startup. The panel starts ready, allowing the original editor to regain focus before the user taps Record. Android requires the microphone foreground-service status while the panel is open, independently of the optional notification launcher.
+
+The overlay shares the keyboard's waveform, recorder, transcriber, model store, and voice language. It never switches the default keyboard. The captured Accessibility input connection receives the transcript only while its generation is valid. Android's Accessibility commit preserves existing composing text. Unsupported editors can use the explicit Copy action. The latest result stays only in panel memory. Closing the panel removes its window and clears the result; microphone cleanup finishes before foreground status stops. Idle panels close after two minutes. The Accessibility binding can remain active for the optional floating button, without foreground microphone status or recording.
 
 The native wrapper returns UTF-8 bytes rather than JNI modified UTF-8 strings, preserving multilingual transcripts. Contexts are freed after each utterance to release memory while the keyboard is idle. Model caching and hardware acceleration are future optimizations requiring phone measurements.
 

@@ -410,7 +410,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:eb848c222630c5c81e48727cdeb446681bbdaeb5f5f4b525c66befdc23f16d7f
+  content_hash: sha256:b4d8093d43ff36e5edff9116d3a07f7a268884acd3a2b1ee3c3774633f45a3c3
 - kind: project-relative
   target: claude
   value: .claude/rules/engineering-baseline.md
@@ -428,7 +428,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:08c99792a87a0a2c9e63fe1ed21ff44d19fbecc04b8a83aad4db631a6dc6c56d
+  content_hash: sha256:bf7fe0da1a4bd79b77f07cba4406e885a446baecf87b3c09c9c7d743d1d46247
 - kind: project-relative
   target: claude
   value: .claude/skills/ai-generation-patterns
@@ -932,7 +932,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:eb848c222630c5c81e48727cdeb446681bbdaeb5f5f4b525c66befdc23f16d7f
+  content_hash: sha256:b4d8093d43ff36e5edff9116d3a07f7a268884acd3a2b1ee3c3774633f45a3c3
 - kind: project-relative
   target: claude
   value: .claude/skills/push-guidance-to-agents
@@ -2290,6 +2290,6 @@ local_deployed_files:
 - .claude/skills/project-architecture
 - .claude/skills/project-architecture/SKILL.md
 local_deployed_file_hashes:
-  .agents/skills/project-architecture/SKILL.md: sha256:eb848c222630c5c81e48727cdeb446681bbdaeb5f5f4b525c66befdc23f16d7f
-  .claude/rules/project-baseline.md: sha256:08c99792a87a0a2c9e63fe1ed21ff44d19fbecc04b8a83aad4db631a6dc6c56d
-  .claude/skills/project-architecture/SKILL.md: sha256:eb848c222630c5c81e48727cdeb446681bbdaeb5f5f4b525c66befdc23f16d7f
+  .agents/skills/project-architecture/SKILL.md: sha256:b4d8093d43ff36e5edff9116d3a07f7a268884acd3a2b1ee3c3774633f45a3c3
+  .claude/rules/project-baseline.md: sha256:bf7fe0da1a4bd79b77f07cba4406e885a446baecf87b3c09c9c7d743d1d46247
+  .claude/skills/project-architecture/SKILL.md: sha256:b4d8093d43ff36e5edff9116d3a07f7a268884acd3a2b1ee3c3774633f45a3c3

@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <application
         android:allowBackup="false"
         android:fullBackupContent="false"
@@ -19,6 +22,29 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".settings.DictationSettingsActivity" android:exported="true" />
+        <activity android:name=".dictation.VoiceLaunchActivity" android:exported="false"
+            android:theme="@style/Theme.GriffBoard.VoiceLaunch" android:excludeFromRecents="true"
+            android:taskAffinity="com.griffinboris.griffboard.voice" />
+        <activity-alias android:name=".dictation.VoiceShortcut" android:targetActivity=".dictation.VoiceLaunchActivity"
+            android:enabled="false" android:exported="true" android:label="@string/voice_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <service android:name=".dictation.DictationTileService" android:enabled="false"
+            android:exported="true" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:icon="@drawable/ic_microphone" android:label="@string/voice_name">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
+        <service android:name=".dictation.DictationAccessibilityService" android:exported="true"
+            tools:targetApi="33"
+            android:enabled="@bool/supports_standalone_dictation" android:label="@string/voice_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" android:foregroundServiceType="microphone">
+            <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/dictation_accessibility" />
+        </service>
         <service android:name=".keyboard.GriffBoardService"
             android:label="@string/app_name"
             android:permission="android.permission.BIND_INPUT_METHOD"

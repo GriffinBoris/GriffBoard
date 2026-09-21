@@ -16,6 +16,8 @@ For a deterministic inference check:
 
 The test sample is included only in the test APK. The microphone lifecycle test grants microphone permission and records for 31 seconds, then checks cancellation and restart. Run it on an emulator or a device where test recording is appropriate. UI tests verify overlapping finger touches, sentence capitalization, suggestion insertion, elapsed time, fixed keyboard height during recording, and tappable waveform controls. Waveform rendering previews use synthetic signed sample peaks; JVM tests check exact peaks from PCM input.
 
+`DictationInstrumentedTest` requires Android 13+. It temporarily enables the optional Accessibility service on the test device and restores its previous setting afterward. It checks independently disabled defaults, component and notification toggles, all four launch routes, composing-text preservation, stale editor connections, recording cancellation on field changes, restart, and foreground-service cleanup. Use a test emulator with another keyboard selected to verify insertion without switching IMEs. Keep emulator audio enabled for the long microphone test; `-no-audio` prevents that test from receiving its required samples.
+
 ## Physical phone checklist
 
 An emulator cannot establish Galaxy microphone quality, battery use, thermal behavior, or practical model latency. Perform these checks on the target phone:
@@ -36,8 +38,14 @@ An emulator cannot establish Galaxy microphone quality, battery use, thermal beh
 - Cancel a model download and retry. An incomplete file must not appear as ready.
 - Select another downloaded model, remove a model, and restart the app.
 - Measure Base, Small, and Turbo latency before selecting the largest model for daily use.
+- With Samsung Keyboard selected, enable Accessibility and test each voice shortcut separately. Confirm that disabling one leaves the others usable and the default keyboard unchanged.
+- Assign GriffBoard Voice to the Samsung side button's Open app action. Check from both an unlocked editor and the lock screen; recording must require unlocking and tapping Record.
+- Test the floating panel in portrait, landscape, light/dark appearance, and larger text. Drag the bubble, record, stop, cancel, and use Copy in an unsupported editor.
+- During standalone recording/transcription, move the cursor, switch fields or apps, and lock the phone. Verify cancellation and no insertion into another editor. Check notification permission denial and Accessibility removal, then re-enable and retry.
 
 ## Recorded results
+
+- Optional voice shortcuts: twenty-six JVM tests passed. All existing device tests passed across runs, and four new API 36 ARM64 tests passed with Gboard selected. The new tests exercised the actual floating button, notification tap, Quick Settings tile, and launcher alias; they verified direct insertion and composing-text preservation, rejection of a stale editor connection, field-change cancellation, restart, and foreground notification removal. The first broad run passed 20 of 21 tests; the long microphone test timed out with emulator audio disabled and passed after enabling emulator audio. Initial shortcut UI-test failures were corrected by traversing notification nodes and restoring the notification shade between tests. Debug/release lint and signed packaging passed. Samsung hardware-button mapping, Android 13-specific behavior, unsupported app editors, and physical-device audio/latency remain device checks.
 
 See the implementation status below for the checks performed during setup. Physical-device performance remains unverified until a phone is connected.
 
