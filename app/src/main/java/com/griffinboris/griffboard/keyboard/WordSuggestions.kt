@@ -2,7 +2,30 @@ package com.griffinboris.griffboard.keyboard
 
 import java.util.Locale
 
-class WordSuggestions(private val words: List<String>) {
+class WordSuggestions(private val frequencies: Map<String, Long>) {
+    private val words = frequencies.keys.sortedByDescending(frequencies::getValue)
+
+    fun correction(word: String): String? {
+        if (word in frequencies || word.length !in 4..24 || word.any { it !in 'a'..'z' }) return null
+        val edits = mutableSetOf<String>()
+        for (index in word.indices) {
+            edits.add(word.removeRange(index, index + 1))
+            for (letter in 'a'..'z') edits.add(word.replaceRange(index, index + 1, letter.toString()))
+            if (index + 1 < word.length) {
+                edits.add(word.replaceRange(index, index + 2, "${word[index + 1]}${word[index]}"))
+            }
+        }
+        for (index in 0..word.length) {
+            for (letter in 'a'..'z') edits.add(word.substring(0, index) + letter + word.substring(index))
+        }
+        val matches = edits.mapNotNull { candidate -> frequencies[candidate]?.let { candidate to it } }
+            .sortedByDescending { it.second }
+        val best = matches.firstOrNull() ?: return null
+        val runnerUp = matches.getOrNull(1)?.second ?: 0L
+        // Corpus counts rank alternatives; they are not calibrated probabilities.
+        return best.first.takeIf { best.second >= 1_000 && best.second >= runnerUp * 4 }
+    }
+
     fun suggest(beforeCursor: String): List<String> {
         val prefix = currentWord(beforeCursor)
         val lower = prefix.lowercase(Locale.ROOT)
@@ -35,7 +58,7 @@ class WordSuggestions(private val words: List<String>) {
                 else -> it
             }
         }
-        return (listOfNotNull(AutoCorrect.replacement(beforeCursor)) + suggestions).distinct().take(3)
+        return (listOfNotNull(AutoCorrect.replacement(beforeCursor, this)) + suggestions).distinct().take(3)
     }
 
     private fun oneEditAway(left: String, right: String): Boolean {

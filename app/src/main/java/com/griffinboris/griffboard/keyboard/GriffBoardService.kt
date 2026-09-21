@@ -23,7 +23,6 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -40,11 +39,15 @@ class GriffBoardService : InputMethodService(), KeyboardView.Listener {
     private var appliedCorrection: AutoCorrect.Applied? = null
     private var pendingCorrection: AutoCorrect.Candidate? = null
     private var dismissedCorrection: AutoCorrect.Candidate? = null
-    private val dictionary by lazy {
-        scope.async(Dispatchers.IO) {
-            WordSuggestions(assets.open("english-frequency.txt").bufferedReader().useLines { lines ->
-                lines.map { it.substringBefore(' ') }.filter { word -> word.all { it.isLetter() || it == '\'' } }.toList()
-            })
+    private var dictionary: WordSuggestions? = null
+    private val dictionaryLoad by lazy {
+        scope.launch {
+            dictionary = withContext(Dispatchers.IO) {
+                WordSuggestions(assets.open("english-frequency.txt").bufferedReader().useLines { lines ->
+                    lines.map { it.substringBefore(' ') to it.substringAfter(' ').toLong() }
+                        .filter { (word, _) -> word.all { it.isLetter() || it == '\'' } }.toMap()
+                })
+            }
         }
     }
     private val models by lazy { ModelStore(this) }
@@ -107,7 +110,7 @@ class GriffBoardService : InputMethodService(), KeyboardView.Listener {
         clearCorrection()
         val connection = currentInputConnection ?: return
         if (preferences.autoCorrect && EditorActions.suggestionsAllowed(info.inputType)) {
-            appliedCorrection = AutoCorrect.apply(connection, value, dismissed)
+            appliedCorrection = AutoCorrect.apply(connection, value, dismissed, dictionary)
         }
         if (appliedCorrection == null) connection.commitText(value, 1)
         keyboard?.correction(appliedCorrection?.original)
@@ -123,7 +126,7 @@ class GriffBoardService : InputMethodService(), KeyboardView.Listener {
         clearMessage()
         val connection = currentInputConnection ?: return
         if (preferences.autoCorrect && EditorActions.suggestionsAllowed(info.inputType)) {
-            AutoCorrect.apply(connection, "", dismissedCorrection)
+            AutoCorrect.apply(connection, "", dismissedCorrection, dictionary)
         }
         clearCorrection()
         EditorActions.enter(connection, info)
@@ -136,14 +139,14 @@ class GriffBoardService : InputMethodService(), KeyboardView.Listener {
         val pending = pendingCorrection ?: return
         val connection = currentInputConnection ?: return
         if (!preferences.autoCorrect || !EditorActions.suggestionsAllowed(info.inputType) ||
-            AutoCorrect.candidate(connection) != pending) { updateTyping(); return }
+            AutoCorrect.candidate(connection, dictionary) != pending) { updateTyping(); return }
         text(" ")
     }
 
     override fun dismissCorrection() {
         val pending = pendingCorrection ?: return
         val connection = currentInputConnection ?: return
-        if (AutoCorrect.candidate(connection) == pending) dismissedCorrection = pending
+        if (AutoCorrect.candidate(connection, dictionary) == pending) dismissedCorrection = pending
         updateTyping()
     }
 
@@ -186,9 +189,12 @@ class GriffBoardService : InputMethodService(), KeyboardView.Listener {
         pendingCorrection = null
         keyboard?.previewCorrection(null, null)
         if (!EditorActions.prose(info.inputType)) { keyboard?.suggestions(emptyList()); return }
+        val loading = dictionaryLoad
         keyboard?.invalidateSuggestions()
         suggestionJob = scope.launch {
             delay(60)
+            loading.join()
+            val engine = requireNotNull(dictionary)
             val connection = currentInputConnection ?: return@launch
             val before = connection.getTextBeforeCursor(256, 0)?.toString() ?: return@launch
             keyboard?.capitalize(WordSuggestions.sentenceStart(before) || connection.getCursorCapsMode(info.inputType) != 0)
@@ -196,9 +202,8 @@ class GriffBoardService : InputMethodService(), KeyboardView.Listener {
                 keyboard?.suggestions(emptyList())
                 return@launch
             }
-            pendingCorrection = if (preferences.autoCorrect) AutoCorrect.candidate(connection)?.takeUnless { it == dismissedCorrection } else null
+            pendingCorrection = if (preferences.autoCorrect) AutoCorrect.candidate(connection, engine)?.takeUnless { it == dismissedCorrection } else null
             keyboard?.previewCorrection(pendingCorrection?.original, pendingCorrection?.replacement)
-            val engine = dictionary.await()
             val words = withContext(Dispatchers.Default) { engine.suggest(before) }
             suggestedBefore = before
             keyboard?.suggestions(words)

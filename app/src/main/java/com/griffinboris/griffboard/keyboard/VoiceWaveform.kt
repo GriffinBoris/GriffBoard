@@ -6,7 +6,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.view.View
-import android.view.animation.LinearInterpolator
+import android.view.animation.AccelerateDecelerateInterpolator
 
 @SuppressLint("ViewConstructor") // Created by KeyboardView, never inflated from XML.
 class VoiceWaveform(context: Context, color: Int) : View(context) {
@@ -17,13 +17,13 @@ class VoiceWaveform(context: Context, color: Int) : View(context) {
         strokeCap = Paint.Cap.ROUND
     }
     private var transcribing = false
-    private var opacity = 1f
-    private val animation = ValueAnimator.ofFloat(1f, 0.4f).apply {
-        duration = 1100
+    private var pulse = 1f
+    private val animation = ValueAnimator.ofFloat(1f, 0f).apply {
+        duration = 650
         repeatCount = ValueAnimator.INFINITE
         repeatMode = ValueAnimator.REVERSE
-        interpolator = LinearInterpolator()
-        addUpdateListener { opacity = it.animatedValue as Float; invalidate() }
+        interpolator = AccelerateDecelerateInterpolator()
+        addUpdateListener { pulse = it.animatedValue as Float; invalidate() }
     }
 
     init { importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO }
@@ -31,7 +31,7 @@ class VoiceWaveform(context: Context, color: Int) : View(context) {
     fun setTranscribing(value: Boolean) {
         if (transcribing == value) return
         transcribing = value
-        opacity = 1f
+        pulse = 1f
         if (value && isAttachedToWindow) animation.start() else animation.cancel()
         invalidate()
     }
@@ -52,9 +52,9 @@ class VoiceWaveform(context: Context, color: Int) : View(context) {
         val barCount = (width / (6f * density)).toInt().coerceIn(1, bucketCount)
         val step = width.toFloat() / barCount
         paint.strokeWidth = minOf(3f * density, step / 2f)
-        paint.alpha = (opacity * 255).toInt()
+        paint.alpha = ((0.35f + pulse * 0.65f) * 255).toInt()
         val center = height / 2f
-        val amplitude = (center - paint.strokeWidth / 2f).coerceAtLeast(0f) * 0.75f
+        val amplitude = (center - paint.strokeWidth / 2f).coerceAtLeast(0f) * (0.55f + pulse * 0.45f)
         for (index in 0 until barCount) {
             val start = index * bucketCount / barCount
             val end = (index + 1) * bucketCount / barCount

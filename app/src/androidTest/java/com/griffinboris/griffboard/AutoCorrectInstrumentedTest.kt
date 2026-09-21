@@ -7,6 +7,7 @@ import android.widget.EditText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.griffinboris.griffboard.keyboard.AutoCorrect
+import com.griffinboris.griffboard.keyboard.WordSuggestions
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -14,6 +15,34 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class AutoCorrectInstrumentedTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
+
+    @Test fun bundledDictionaryCorrectsUnknownWordsAndHonorsDismissalAndUndo() {
+        val dictionary = WordSuggestions(instrumentation.targetContext.assets.open("english-frequency.txt")
+            .bufferedReader().useLines { lines ->
+                lines.associate { it.substringBefore(' ') to it.substringAfter(' ').toLong() }
+            })
+        instrumentation.runOnMainSync {
+            val editor = EditText(instrumentation.targetContext)
+            val connection = requireNotNull(editor.onCreateInputConnection(EditorInfo()))
+            for ((typo, correction) in listOf("keyboarf" to "keyboard", "speling" to "spelling", "typign" to "typing")) {
+                editor.setText(typo)
+                editor.setSelection(editor.length())
+                val candidate = requireNotNull(AutoCorrect.candidate(connection, dictionary))
+                assertEquals(correction, candidate.replacement)
+                assertNull(AutoCorrect.apply(connection, " ", candidate, dictionary))
+                assertEquals(typo, editor.text.toString())
+                val applied = requireNotNull(AutoCorrect.apply(connection, " ", dictionary = dictionary))
+                assertEquals("$correction ", editor.text.toString())
+                assertTrue(AutoCorrect.undo(connection, applied))
+                assertEquals("$typo ", editor.text.toString())
+            }
+            listOf("world", "hellp").forEach { word ->
+                editor.setText(word)
+                editor.setSelection(editor.length())
+                assertNull(AutoCorrect.candidate(connection, dictionary))
+            }
+        }
+    }
 
     @Test fun dismissedCandidateIsKeptButDoesNotSuppressTheNextOccurrence() {
         instrumentation.runOnMainSync {

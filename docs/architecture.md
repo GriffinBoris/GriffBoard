@@ -15,9 +15,11 @@ GriffBoard is one Android app module. It has no backend and no account system.
 | `keyboard/VoiceWaveform` | Signed microphone waveform; recorded shape pulses during transcription |
 | `keyboard/RecordingOverlay` | Timer and tappable waveform covering the key area during dictation |
 | `keyboard/WordSuggestions` | Offline English completions, one-edit corrections, and basic next-word choices |
-| `keyboard/AutoCorrect` | Conservative common-typo replacements and cursor-checked undo |
+| `keyboard/AutoCorrect` | Common-typo and dictionary replacements with cursor-checked undo |
 | `voice/WhisperTranscriber` | Coroutine/JNI boundary and native-job ownership |
 | `cpp/` | Pinned whisper.cpp build and a small JNI adapter |
+
+Dictionary auto-correction considers unknown lowercase English words of 4–24 letters with one insertion, deletion, substitution, or adjacent transposition. A match needs at least 1,000 occurrences in the bundled corpus and four times the frequency of the next candidate. These are conservative ranking rules, not probability estimates. Existing common-typo rules also apply. Valid dictionary words and ambiguous matches are not automatically replaced. The same resolver chooses the preview and the correction at a word boundary, so acceptance does not depend on the preview having appeared.
 
 ## Voice lifecycle
 

@@ -5,7 +5,7 @@ import android.view.inputmethod.InputConnection
 import java.util.Locale
 
 object AutoCorrect {
-    // Explicit common typos avoid guessing between valid words, names, and completions.
+    // Keep unambiguous common typos even when dictionary alternatives have similar frequencies.
     private val corrections = mapOf(
         "teh" to "the", "adn" to "and", "thsi" to "this", "taht" to "that",
         "wiht" to "with", "wihch" to "which", "whcih" to "which", "hte" to "the",
@@ -24,7 +24,7 @@ object AutoCorrect {
     data class Candidate(val original: String, val replacement: String, val cursor: Int,
         val before: String, val after: String)
 
-    fun replacement(before: String): String? {
+    fun replacement(before: String, dictionary: WordSuggestions? = null): String? {
         val word = WordSuggestions.currentWord(before)
         val prefix = before.dropLast(word.length)
         if (word.isEmpty() || word.all(Char::isUpperCase)) return null
@@ -32,13 +32,13 @@ object AutoCorrect {
         val lower = word.lowercase(Locale.ROOT)
         val titleCase = word == lower.replaceFirstChar(Char::uppercaseChar)
         if (word != lower && (!titleCase || !WordSuggestions.sentenceStart(prefix))) return null
-        val corrected = corrections[lower] ?: return null
+        val corrected = corrections[lower] ?: dictionary?.correction(lower) ?: return null
         return if (titleCase) corrected.replaceFirstChar(Char::uppercaseChar) else corrected
     }
 
-    fun candidate(connection: InputConnection): Candidate? {
+    fun candidate(connection: InputConnection, dictionary: WordSuggestions? = null): Candidate? {
         val before = connection.getTextBeforeCursor(256, 0)?.toString() ?: return null
-        val replacement = replacement(before) ?: return null
+        val replacement = replacement(before, dictionary) ?: return null
         val after = connection.getTextAfterCursor(256, 0)?.toString() ?: return null
         if (after.firstOrNull()?.let { it.isLetterOrDigit() || it in "'_" } == true) return null
         val cursor = cursor(connection) ?: return null
@@ -46,9 +46,10 @@ object AutoCorrect {
         return Candidate(original, replacement, cursor, before, after)
     }
 
-    fun apply(connection: InputConnection, separator: String, dismissed: Candidate? = null): Applied? {
+    fun apply(connection: InputConnection, separator: String, dismissed: Candidate? = null,
+        dictionary: WordSuggestions? = null): Applied? {
         if (separator !in listOf("", " ", ".", ",", "!", "?", ";", ":")) return null
-        val candidate = candidate(connection) ?: return null
+        val candidate = candidate(connection, dictionary) ?: return null
         if (candidate == dismissed) return null
         val (original, replacement, cursor, before, after) = candidate
         if (!replace(connection, cursor - original.length, cursor, replacement + separator)) return null

@@ -1,6 +1,7 @@
 package com.griffinboris.griffboard
 
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.view.Gravity
 import android.widget.FrameLayout
 import androidx.test.core.app.ActivityScenario
@@ -11,9 +12,11 @@ import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.griffinboris.griffboard.keyboard.KeyboardView
+import com.griffinboris.griffboard.keyboard.VoiceWaveform
 import com.griffinboris.griffboard.settings.SettingsActivity
 import com.griffinboris.griffboard.voice.RecordingProgress
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.hamcrest.Matchers.allOf
@@ -21,6 +24,37 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class VoiceFeedbackInstrumentedTest {
+    @Test fun transcriptionPulsesTheRecordedBarsAndRecordingRestoresTheirHeight() {
+        ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+            lateinit var waveform: VoiceWaveform
+            scenario.onActivity { activity ->
+                waveform = VoiceWaveform(activity, android.graphics.Color.BLUE)
+                activity.setContentView(waveform)
+                waveform.addSamples(FloatArray(512) { if (it % 2 == 0) -0.2f else 0.2f })
+            }
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            lateinit var original: Bitmap
+            scenario.onActivity {
+                original = Bitmap.createBitmap(waveform.width, waveform.height, Bitmap.Config.ARGB_8888)
+                waveform.draw(Canvas(original))
+                waveform.setTranscribing(true)
+            }
+            Thread.sleep(350)
+            scenario.onActivity {
+                val pulsing = Bitmap.createBitmap(waveform.width, waveform.height, Bitmap.Config.ARGB_8888)
+                waveform.draw(Canvas(pulsing))
+                assertTrue("Transcription must visibly animate the recorded waveform", !original.sameAs(pulsing))
+                waveform.setTranscribing(false)
+                val restored = Bitmap.createBitmap(waveform.width, waveform.height, Bitmap.Config.ARGB_8888)
+                waveform.draw(Canvas(restored))
+                assertTrue("Leaving transcription must restore the captured waveform", original.sameAs(restored))
+                original.recycle()
+                pulsing.recycle()
+                restored.recycle()
+            }
+        }
+    }
+
     @Test fun elapsedTimeAndWaveformsKeepStopAndCancelAccessible() {
         var microphoneTaps = 0
         var undoTaps = 0
