@@ -20,7 +20,10 @@ class SettingsViews(private val context: Context) {
         if (bold) typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         setPadding(0, context.dp(4), 0, context.dp(4))
     }
-    fun button(value: String, action: () -> Unit) = MaterialButton(context).apply {
+    fun button(value: String, secondary: Boolean = false, action: () -> Unit) = MaterialButton(
+        context, null, if (secondary) com.google.android.material.R.attr.materialButtonOutlinedStyle
+        else com.google.android.material.R.attr.materialButtonStyle,
+    ).apply {
         text = value
         isAllCaps = false
         minHeight = context.dp(48)

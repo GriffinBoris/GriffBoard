@@ -24,6 +24,9 @@ GriffBoard is a single-module Kotlin Android keyboard with local Whisper dictati
 - Use native Android views for the IME and Material components for settings. Share theme values; support light/dark system appearance.
 - Keep the input-method service responsible for Android lifecycle and text insertion, with recording and inference off the main thread.
 - Native inference is serialized. Cancellation must reach whisper.cpp, and native contexts must be freed after use.
+- Recording has no fixed duration cutoff. Keep PCM in memory and report captured duration and signed min/max sample buckets on the controller's coroutine context. Preserve the recorded waveform during transcription; pulse its opacity to indicate activity. Stop animations when the view detaches.
+- Change letter case in place instead of rebuilding key views: rebuilding can cancel overlapping finger touches. Keep visual key gutters inside the touch targets.
+- English suggestions use the bundled, attributed dictionary offline. Do not persist editor text. Debounce lookup off the main thread, invalidate stale results on edits/session changes, and exclude passwords, structured fields, and editors that disable suggestions.
 - Models use whisper.cpp GGML `.bin` format. GGUF cleanup models from OpenTranscribe are a separate runtime and must not appear as speech models.
 - Download catalog URLs use immutable Hugging Face revisions and SHA-256 digests. Publish a model only after size and digest checks. Partial downloads must never be selectable.
 - Support Android 10+ and package ARM64 for phones plus x86_64 for testing. Keep upstream C++ pinned and unmodified; pin NDK and CMake in Gradle.
@@ -40,5 +43,6 @@ GriffBoard is a single-module Kotlin Android keyboard with local Whisper dictati
 - Disable baseline alignment on horizontal key rows. Mixed label sizes otherwise shift key backgrounds vertically to align the text baselines.
 - Apply system/IME insets to the settings root container so the ScrollView's viewport shrinks around the focused test field. Padding only the ScrollView can leave the editor behind the keyboard.
 - Reserve a bottom navigation area in the IME. Android's IME navigation controls can overlay the input view even when reported navigation insets are consumed.
+- Set the IME window's light-navigation appearance to match the keyboard theme; otherwise Android can draw white dismiss and keyboard-switch icons on a light keyboard.
 - Keep native code optimized in debug builds; otherwise a sideloaded debug APK gives misleading Whisper latency.
 - Release versions live in `version.properties`. Releases require a persistent signing identity from environment secrets and must never fall back to an ephemeral debug signature.

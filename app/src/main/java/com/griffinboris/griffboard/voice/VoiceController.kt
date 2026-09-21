@@ -5,10 +5,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.IOException
 
+data class RecordingProgress(val seconds: Int, val waveform: FloatArray)
+
 interface VoiceRecorder {
-    suspend fun record(): FloatArray
+    suspend fun record(onProgress: suspend (RecordingProgress) -> Unit): FloatArray
     fun stop()
 }
 
@@ -24,9 +27,12 @@ class VoiceController(
     private val onState: (State) -> Unit,
     private val onResult: (String) -> Unit,
     private val onError: (String) -> Unit,
+    private val onProgress: (RecordingProgress) -> Unit = {},
 ) {
     enum class State { IDLE, RECORDING, TRANSCRIBING, CANCELLING }
     var state = State.IDLE
+        private set
+    var progress = RecordingProgress(0, floatArrayOf())
         private set
     private var job: Job? = null
     private var recorder: VoiceRecorder? = null
@@ -35,10 +41,19 @@ class VoiceController(
         if (job?.isCompleted == false) return false
         val capture = recorderFactory()
         recorder = capture
+        progress = RecordingProgress(0, floatArrayOf())
         update(State.RECORDING)
         job = scope.launch(start = CoroutineStart.UNDISPATCHED) {
             try {
-                val audio = capture.record()
+                val controllerContext = coroutineContext
+                val audio = capture.record { value ->
+                    withContext(controllerContext) {
+                        if (state == State.RECORDING) {
+                            progress = value
+                            onProgress(value)
+                        }
+                    }
+                }
                 if (!AudioSignal.hasSpeech(audio)) {
                     onError("No speech heard. Try again closer to the microphone.")
                     return@launch

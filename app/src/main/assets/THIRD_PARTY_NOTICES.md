@@ -4,6 +4,7 @@
 - **OpenAI Whisper model weights** — MIT. Models are downloaded separately from https://huggingface.co/ggerganov/whisper.cpp and originate from https://github.com/openai/whisper.
 - **AndroidX and Material Components for Android** — Apache-2.0. Libraries are resolved through Google's Maven repository.
 - **Kotlin coroutines** — Apache-2.0. https://github.com/Kotlin/kotlinx.coroutines
+- **English frequency dictionary** — CC BY-SA 4.0. Hermit Dave, FrequencyWords, English 2018 list derived from OpenSubtitles2018. Bundled without changes from commit 525f9b560de45753a5ea01069454e72e9aa541c6: https://github.com/hermitdave/FrequencyWords/blob/525f9b560de45753a5ea01069454e72e9aa541c6/content/2018/en/en_50k.txt . License: https://creativecommons.org/licenses/by-sa/4.0/ . Full license text is bundled in ENGLISH_WORDS_LICENSE.txt. The dictionary license applies to this data, not the application code.
 - **GriffinBoris/Agents v0.1.0** — MIT. Development guidance only; not packaged in the Android app.
 - **JFK test audio** — Excerpt from the 1961 inaugural address, a public-domain US federal government work. Copied from whisper.cpp's test sample and packaged only in the instrumentation APK.
 

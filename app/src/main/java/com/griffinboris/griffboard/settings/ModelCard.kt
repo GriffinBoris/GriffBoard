@@ -23,10 +23,12 @@ class ModelCard(
     private val store = ModelStore(activity)
     private val workManager = WorkManager.getInstance(activity)
     private val column = ui.column()
-    private val status: TextView = ui.label("")
+    private val status: TextView = ui.label("", 14f).apply {
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
     private val progress = LinearProgressIndicator(activity).apply { max = 100 }
     private val action = ui.button("Download") { act() }
-    private val remove = ui.button("Remove") { delete() }
+    private val remove = ui.button("Remove", secondary = true) { delete() }
     private var work: WorkInfo? = null
     val view = ui.card(column)
 
@@ -66,6 +68,9 @@ class ModelCard(
         progress.progress = percent
         action.text = when { active -> "Cancel"; selected -> "Selected"; installed -> "Use model"; else -> "Download" }
         action.isEnabled = !selected || active
+        action.visibility = if (selected && !active) View.GONE else View.VISIBLE
+        view.strokeColor = com.google.android.material.color.MaterialColors.getColor(view,
+            if (selected) androidx.appcompat.R.attr.colorPrimary else com.google.android.material.R.attr.colorOutlineVariant)
         remove.visibility = if (installed && !active) View.VISIBLE else View.GONE
     }
 

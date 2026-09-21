@@ -18,7 +18,11 @@ class VoiceControllerTest {
         val audio = CompletableDeferred<FloatArray>()
         var stopped = false
         var released = false
-        override suspend fun record(): FloatArray = try { audio.await() } finally { released = true }
+        lateinit var progress: suspend (RecordingProgress) -> Unit
+        override suspend fun record(onProgress: suspend (RecordingProgress) -> Unit): FloatArray {
+            progress = onProgress
+            return try { audio.await() } finally { released = true }
+        }
         override fun stop() { stopped = true }
     }
     private class Transcriber : VoiceTranscriber {
@@ -76,7 +80,7 @@ class VoiceControllerTest {
     @Test fun cannotStartAnotherRecordingUntilCancellationReleasesTheMicrophone() = runTest {
         val released = CompletableDeferred<Unit>()
         val recorder = object : VoiceRecorder {
-            override suspend fun record(): FloatArray {
+            override suspend fun record(onProgress: suspend (RecordingProgress) -> Unit): FloatArray {
                 try { awaitCancellation() }
                 finally { withContext(NonCancellable) { released.await() } }
             }
@@ -112,5 +116,25 @@ class VoiceControllerTest {
         advanceUntilIdle()
         assertEquals(1, errors.size)
         assertEquals(VoiceController.State.IDLE, controller.state)
+    }
+
+    @Test fun recordingProgressContinuesPastThirtySecondsAndResetsForNextSession() = runTest {
+        val recorder = Recorder()
+        val updates = mutableListOf<RecordingProgress>()
+        val controller = VoiceController(this, { recorder }, Transcriber(), {}, {}, { fail(it) }, updates::add)
+        controller.start("model", "en")
+        recorder.progress(RecordingProgress(31, floatArrayOf(-0.2f, 0.2f)))
+        recorder.progress(RecordingProgress(125, floatArrayOf(-0.4f, 0.4f)))
+        assertEquals(listOf(31, 125), updates.map { it.seconds })
+        assertEquals(VoiceController.State.RECORDING, controller.state)
+        assertFalse(recorder.stopped)
+        assertEquals(125, controller.progress.seconds)
+        controller.cancel()
+        advanceUntilIdle()
+        controller.start("model", "en")
+        assertEquals(0, controller.progress.seconds)
+        assertTrue(controller.progress.waveform.isEmpty())
+        controller.cancel()
+        advanceUntilIdle()
     }
 }

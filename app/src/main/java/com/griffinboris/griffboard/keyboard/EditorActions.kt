@@ -6,6 +6,14 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 
 object EditorActions {
+    fun prose(type: Int): Boolean {
+        if (type and InputType.TYPE_MASK_CLASS != InputType.TYPE_CLASS_TEXT || isPassword(type)) return false
+        return type and InputType.TYPE_MASK_VARIATION !in setOf(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS,
+            InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_URI)
+    }
+
+    fun suggestionsAllowed(type: Int) = prose(type) && type and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS == 0
+
     fun isPassword(type: Int): Boolean {
         val variation = type and InputType.TYPE_MASK_VARIATION
         return when (type and InputType.TYPE_MASK_CLASS) {
@@ -42,5 +50,17 @@ object EditorActions {
             connection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))
             connection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL))
         }
+    }
+
+    fun insertSuggestion(connection: InputConnection, before: String, value: String) {
+        val after = connection.getTextAfterCursor(256, 0)?.toString().orEmpty()
+        val suffix = after.takeWhile { it.isLetter() || it == '\'' }
+        val remaining = after.drop(suffix.length)
+        val space = if (remaining.firstOrNull()?.isWhitespace() == true || remaining.firstOrNull() in listOf('.', ',', '!', '?', ';', ':')) "" else " "
+        connection.beginBatchEdit()
+        try {
+            connection.deleteSurroundingText(WordSuggestions.currentWord(before).length, suffix.length)
+            connection.commitText(value + space, 1)
+        } finally { connection.endBatchEdit() }
     }
 }

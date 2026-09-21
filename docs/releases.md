@@ -41,7 +41,7 @@ The release workflow stops when the keystore is missing. Debug APKs remain avail
 1. Update the version with an increasing version code:
 
    ```sh
-   task release:prepare VERSION=0.1.1 VERSION_CODE=2
+   task release:prepare VERSION=0.2.0 VERSION_CODE=3
    ```
 
 2. Run `task local:check`.

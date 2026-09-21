@@ -5,15 +5,18 @@ Built with Kotlin, native Android views, Material components, and whisper.cpp.
 
 ## What works
 
-- English QWERTY, optional number row, symbols, a small emoji panel, shift/caps lock, repeat delete, and numeric fields.
+- English QWERTY, optional number row, two symbol pages, a small emoji panel, repeat delete, and numeric fields.
+- Shift and Delete use vector icons. Tap Shift for one uppercase letter, tap it again while selected for caps lock, and tap once more for lowercase.
 - Editor actions such as Send, Search, Next, and Done. Hold the spacebar to switch keyboards.
 - System light/dark appearance and optional key vibration.
-- Tap the microphone to record, then tap stop to transcribe and insert text. Each recording is limited to 30 seconds.
+- Tap the microphone to replace the keys with a timer and live microphone waveform. Tap the waveform to stop and transcribe. The captured waveform pulses during transcription; tap again to cancel. There is no fixed recording limit. Longer recordings use more memory.
+- English suggestions appear in the toolbar: word completion, simple spelling corrections, and common next-word choices. Tap a suggestion to insert it. Suggestions run offline, do not learn or store typed text, and are disabled in passwords, email addresses, URLs, numeric fields, and editors that request no suggestions.
+- Sentence-ending punctuation capitalizes the next letter. Shift updates key labels without rebuilding touch targets, so overlapping taps remain active.
 - Six downloadable, selectable models: Tiny English, Base English, Base multilingual, Small, Medium, and Large v3 Turbo.
 - Download progress, cancellation, removal, size checks, and SHA-256 verification before models become usable.
 - On-device inference, no account, no telemetry, no cloud transcription, and no saved audio or typing history.
 
-This first version does not include swipe typing, predictive suggestions, autocorrect, continuous streaming dictation, or arbitrary model imports. The keyboard layout is English; multilingual models can transcribe other languages.
+This version does not include swipe typing, automatic word replacement, personalized predictions, continuous streaming dictation, or arbitrary model imports. English suggestions use a bundled frequency dictionary and a small set of common next-word choices. The keyboard layout is English; multilingual models can transcribe other languages.
 
 ## Install
 
